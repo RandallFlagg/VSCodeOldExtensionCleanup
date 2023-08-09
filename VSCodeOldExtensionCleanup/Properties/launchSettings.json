@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "VSCodeOldExtensionCleanup": {
+      "commandName": "Project",
+      "commandLineArgs": "\"E:\\\\TEST\""
+    }
+  }
+}
