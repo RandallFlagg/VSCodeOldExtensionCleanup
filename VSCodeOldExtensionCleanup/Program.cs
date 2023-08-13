@@ -1,12 +1,10 @@
 using Microsoft.VisualBasic;
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Text.RegularExpressions;
 
 Console.ForegroundColor = ConsoleColor.White;
-// See https://aka.ms/new-console-template for more information
-Console.WriteLine("Hello, World!");
-
-string directory = null;
 
 if (args.Length > 1)
 {
@@ -14,25 +12,16 @@ if (args.Length > 1)
 }
 else if (args.Length == 1)
 {
-    foreach (var arg in args)
-    {
-        Console.WriteLine($"Argument={arg}");
-        if (Directory.Exists(arg))
-        {
-            directory = arg;
-        }
-        else
-        {
-            throw new ArgumentException("Send an EXISTING directory to scan", nameof(args));
-        }
+    Console.WriteLine($"Argument={arg}");
+    DirectoryInfo di = new(args[0]);
+    if (!Directory.Exists(di.FullName)) {
+        throw new ArgumentException("Send an EXISTING directory to scan", nameof(args));
     }
-
-    DirectoryInfo di = new(directory);
     // String - key - d.Name;
     // Tuple :
     // String - Version - d.Name.Split("-")
     // String[] - Directories - Version < HighestVersion
-    Dictionary<string, IList<Tuple<Version, string>>> directoriesCandidatesToDelete = new();
+    Dictionary<string, IList<(Version, string)>> directoriesCandidatesToDelete = new();
     foreach (var d in di.GetDirectories())
     {
         var keyPattern = @"^.*?(.*)-[0-9].+";
@@ -47,10 +36,10 @@ else if (args.Length == 1)
             //Console.WriteLine($"Version: {version}");
             if (!directoriesCandidatesToDelete.ContainsKey(key))
             {
-                var versions = new List<Tuple<Version, string>>();
+                var versions = new List<(Version, string)>();
                 directoriesCandidatesToDelete.Add(key, versions);
             }
-            directoriesCandidatesToDelete[key].Add(new Tuple<Version, string>(new Version(version), d.Name));
+            directoriesCandidatesToDelete[key].Add(new(new Version(version), d.FullName));
         }
         else
         {
@@ -60,6 +49,8 @@ else if (args.Length == 1)
         }
     }
 
+    directoriesCandidatesToDelete.Where(key => key.Value.Count == 1).ToList().ForEach(item => directoriesCandidatesToDelete.Remove(item.Key));
+
     var directoriesToDelete = RemoveHighestVersion(directoriesCandidatesToDelete);
 
     DeleteRedundantDirectories(directoriesToDelete);
@@ -68,14 +59,14 @@ else if (args.Length == 1)
 }
 else
 {
-    Console.WriteLine("No arguments");
+    Console.WriteLine("No arguments were provided. Send a directory to scan.");
 }
 
-void DeleteRedundantDirectories(IList<string> directoriesToDelete)
+void DeleteRedundantDirectories(IEnumerable<(Version, string)> directoriesToDelete)
 {
     foreach (var dir in directoriesToDelete)
     {
-        var fullPath = Path.Combine(directory, dir);
+        var fullPath = dir.Item2;
         Console.ForegroundColor = ConsoleColor.Blue;
         Console.WriteLine($"About to Delete: {fullPath}");
         if (Directory.Exists(fullPath))
@@ -88,39 +79,33 @@ void DeleteRedundantDirectories(IList<string> directoriesToDelete)
         else
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"Path Not FoundBad: {fullPath}");
+            Console.WriteLine($"Path Not Found. Bad: {fullPath}");
         }
     }
 
     Console.ForegroundColor = ConsoleColor.White;
 }
 
-IList<string> RemoveHighestVersion(Dictionary<string, IList<Tuple<Version, string>>> directoriesCandidatesToDelete) //TODO: Give a better  name
+IEnumerable<(Version, string)> RemoveHighestVersion(Dictionary<string, IList<(Version, string)>> directoriesCandidatesToDelete) //TODO: Give a better  name
 {
-    var result = new List<string>();
+    var result = new List<(Version, string)>();
     foreach (var key in directoriesCandidatesToDelete)
     {
-        if (key.Value.Count > 1)
+        if (key.Value.Count == 1)
         {
-            // Sort the tuples by the first string in the tuple
-            var sorted_tuples = key.Value.OrderBy(tuple => tuple.Item1).ToList();
-
-            Console.WriteLine($"Skipping: {sorted_tuples[^1]}");
-
-            for (var i = 0; i < sorted_tuples.Count - 1; i++)
-            {
-                var tuple = sorted_tuples[i];
-                Console.WriteLine($"Selected for Deleting: {tuple.Item1} {tuple.Item2}");
-                result.Add(tuple.Item2);
-            }
+            throw new InvalidOperationException("This should not have happened");
         }
+        // Sort the tuples by the version in the tuple
+        var highestVersion = key.Value.OrderBy(tuple => tuple.Item1).Last();
+        key.Value.Remove(highestVersion);
+        result.AddRange(key.Value);
+        Console.WriteLine($"Skipping: {highestVersion.Item2}");
     }
 
     return result;
 }
 
-
-
-
-
-
+public class Clean
+{
+    //TODO: Move all the logic above to a method in this class
+}
