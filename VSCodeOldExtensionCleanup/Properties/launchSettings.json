@@ -1,8 +1,22 @@
 {
   "profiles": {
     "VSCodeOldExtensionCleanup": {
-      "commandName": "Project",
-      "commandLineArgs": "\"E:\\\\TEST\""
+      //Success
+      //"commandLineArgs": "-f \"E:\\\\TEST\"",
+      //"commandLineArgs": "-c \"E:\\\\TEST\"",
+      "commandLineArgs": "-c -f \"E:\\\\TEST\"",
+
+      //Warnning
+      //"commandLineArgs": "-c -q \"E:\\\\TEST\"",
+      //"commandLineArgs": "-q -c \"E:\\\\TEST\"",
+
+      //Error
+      //"commandLineArgs": "",
+      //"commandLineArgs": "-f",
+      //"commandLineArgs": "-f \"E:\\\\TEST\" BLABLA",
+      //"commandLineArgs": "\"E:\\\\TEST\"",
+
+      "commandName": "Project"
     }
   }
 }
